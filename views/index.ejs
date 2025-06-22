@@ -6,220 +6,251 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Your Notes</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      user-select: none;
-    }
-
-    input,
-    textarea,
-    button {
-      user-select: text;
-    }
-  </style>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          animation: {
-            fadeInUp: "fadeInUp 0.5s ease-out forwards",
-            pulseSlow: "pulse 3s ease-in-out infinite",
-            fadeInModal: "fadeInModal 0.3s ease-out forwards",
-            flyToBin: "flyToBin 0.6s ease-in-out forwards"
-          },
-          keyframes: {
-            fadeInUp: {
-              "0%": { opacity: 0, transform: "translateY(20px)" },
-              "100%": { opacity: 1, transform: "translateY(0)" },
-            },
-            fadeInModal: {
-              "0%": { opacity: 0, transform: "scale(0.8)" },
-              "100%": { opacity: 1, transform: "scale(1)" },
-            },
-            flyToBin: {
-              "0%": { opacity: 1, transform: "translateY(0) scale(1)" },
-              "100%": { opacity: 0, transform: "translateY(100px) scale(0.5)" },
-            }
-          }
-        }
-      }
-    };
-
-    let currentFile = "";
-    let isEditing = false;
-
-    function openModal(filename) {
-      currentFile = filename;
-      isEditing = false;
-
-      const modal = document.getElementById('noteModal');
-      const modalContent = document.getElementById('modalContent');
-
-      fetch(`/Files/${filename}`)
-        .then(response => response.text())
-        .then(data => {
-          modalContent.innerHTML = `
-          <h3 class="text-xl font-bold text-green-400 mb-4">${filename}</h3>
-          <div id="viewMode">
-            <pre class="whitespace-pre-wrap break-words text-sm text-zinc-200">${data}</pre>
-            <button onclick="startEditing('${filename}', \`${data.replace(/`/g, '\\`')}\`)" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg">Edit Note</button>
-          </div>
-        `;
-        })
-        .catch(err => {
-          modalContent.innerHTML = `<p class="text-red-500">Error loading file: ${err}</p>`;
-        });
-
-      modal.classList.remove('hidden');
-      modal.classList.add('animate-fadeInModal');
-    }
-
-    function startEditing(filename, content) {
-      isEditing = true;
-      const modalContent = document.getElementById('modalContent');
-      modalContent.innerHTML = `
-      <h3 class="text-xl font-bold text-yellow-400 mb-4">${filename}</h3>
-      <form onsubmit="event.preventDefault(); saveEdit('${filename}')">
-        <textarea id="editArea" class="w-full h-64 p-4 bg-zinc-700 text-white rounded-lg resize-none">${content}</textarea>
-        <div class="mt-4 flex justify-end space-x-4">
-          <button type="button" onclick="cancelEdit()" class="px-4 py-2 bg-zinc-500 hover:bg-zinc-400 text-white rounded-lg">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg">Save</button>
-        </div>
-      </form>
-    `;
-    }
-
-    function cancelEdit() {
-      openModal(currentFile);
-    }
-
-    function saveEdit(filename) {
-      const newData = document.getElementById('editArea').value;
-
-      fetch('/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ filename, content: newData })
-      })
-        .then(res => {
-          if (!res.ok) throw new Error('Failed to update');
-          return res.text();
-        })
-        .then(() => {
-          openModal(filename);
-        })
-        .catch(err => {
-          alert("Error updating note: " + err.message);
-        });
-    }
-
-    function closeModal() {
-      const modal = document.getElementById('noteModal');
-      modal.classList.add('hidden');
-    }
-
-    // Delete modal logic stays the same
-  </script>
-
+  <link rel="stylesheet" href="/style/style.css">
 </head>
 
-<body class="bg-zinc-900 text-white font-sans">
-  <div class="main min-h-screen w-full flex flex-col items-center justify-start py-10 px-4">
+<body class="text-white font-sans min-h-screen">
+  <!-- Floating particles background -->
+  <div class="particles">
+    <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="left: 20%; animation-delay: 2s;"></div>
+    <div class="particle" style="left: 30%; animation-delay: 4s;"></div>
+    <div class="particle" style="left: 40%; animation-delay: 1s;"></div>
+    <div class="particle" style="left: 50%; animation-delay: 3s;"></div>
+    <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
+    <div class="particle" style="left: 70%; animation-delay: 2.5s;"></div>
+    <div class="particle" style="left: 80%; animation-delay: 4.5s;"></div>
+    <div class="particle" style="left: 90%; animation-delay: 1.5s;"></div>
+  </div>
 
-    <!-- Form Section -->
-    <div class="form bg-zinc-800 p-8 rounded-xl shadow-xl border border-zinc-700 w-full max-w-xl animate-fadeInUp">
-      <h2 class="text-3xl font-semibold mb-6 text-center text-green-400 animate-pulseSlow">Create a Note</h2>
-      <form action="/create" method="post">
-        <input
-          class="block mb-4 w-full rounded-lg px-5 py-3 bg-zinc-700 placeholder-zinc-400 text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition"
-          type="text" name="title" id="Title" placeholder="Enter the Title of the Note" required maxlength="100" />
-        <textarea
-          class="block mb-4 w-full rounded-lg px-5 py-3 bg-zinc-700 placeholder-zinc-400 text-white resize-none h-32 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
-          name="details" id="details" placeholder="Write your Note here..." maxlength="500000" required></textarea>
-        <input
-          class="bg-green-600 hover:bg-green-500 transition text-white font-semibold px-6 py-3 rounded-lg w-full cursor-pointer"
-          type="submit" value="Create Task" />
-      </form>
-    </div>
-
-    <!-- Tasks Section -->
-    <div class="tasks mt-10 w-full max-w-6xl grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 animate-fadeInUp">
-      <% if (files.length> 0) { %>
-        <% files.forEach(function(val) { %>
-          <div
-            class="relative task bg-zinc-700 p-5 rounded-xl shadow-lg border border-zinc-600 hover:scale-[1.03] hover:shadow-2xl transition-transform duration-300"
-            id="card-<%= val %>">
-
-            <!-- Delete Button -->
-            <form action="/delete" method="POST"
-              onsubmit="event.preventDefault(); confirmDelete(this, this.closest('.task'));">
-              <input type="hidden" name="filename" value="<%= val %>">
-              <button type="submit" title="Delete"
-                class="absolute top-2 right-2 text-red-400 hover:text-red-300 bg-zinc-800 rounded-full w-8 h-8 flex items-center justify-center shadow hover:shadow-md transition">
-                🗑️
+  <!-- Header -->
+  <header class="relative z-10 slide-in-right">
+    <div class="glass-card border-0 border-b border-white/20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-10 h-10 bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 rounded-xl flex items-center justify-center rotate-float pulse-glow">
+              <svg class="w-6 h-6 text-white icon-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                </path>
+              </svg>
+            </div>
+            <h1 class="text-xl font-bold gradient-text">Notes Manager</h1>
+          </div>
+          <div class="flex items-center">
+            <form action="/logout" method="post">
+              <button type="submit"
+                class="btn-danger ripple inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl text-white border-0 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-transparent">
+                <svg class="w-4 h-4 mr-2 icon-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                  </path>
+                </svg>
+                Logout
               </button>
             </form>
-
-            <!-- Filename and Edit Button -->
-            <div class="group flex items-center">
-              <h1 class="text-white text-xl font-bold tracking-tight truncate max-w-[calc(100%-2rem)]"
-                title="<%= val %>">
-                <%= val %>
-              </h1>
-              <button title="Edit filename" onclick="openEditModal('<%= encodeURIComponent(val) %>')"
-                class="ml-2 text-zinc-400 hover:text-yellow-400 transition-opacity opacity-0 group-hover:opacity-100">
-                ✏️
-              </button>
-            </div>
-
-            <p class="text-sm text-zinc-300 mt-2 line-clamp-3">
-              A brief description or snippet of your note content can go here to help users preview the note.
-            </p>
-            <button class="text-green-400 hover:underline inline-block mt-3 font-medium transition-colors duration-200"
-              onclick="openModal('<%= val %>')">Read More...</button>
           </div>
-          <% }); %>
-            <% } else { %>
-              <div class="col-span-full text-center animate-fadeInUp mt-10">
-                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png" alt="No Tasks"
-                  class="mx-auto w-24 h-24 opacity-40 mb-4" />
-                <h3 class="text-zinc-500 text-lg italic">No tasks to show... Create your first note above!</h3>
-              </div>
-              <% } %>
+        </div>
+      </div>
     </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Create Note Form -->
+    <div class="glass-card rounded-3xl p-6 sm:p-8 mb-8 fade-in-up">
+      <div class="text-center mb-8">
+        <div
+          class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 rounded-3xl mb-6 rotate-float pulse-glow">
+          <svg class="w-10 h-10 text-white icon-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+        </div>
+        <h2 class="text-3xl font-bold text-white mb-3 gradient-text">Create New Note</h2>
+        <p class="text-white/70 text-lg">Capture your thoughts and ideas with elegance</p>
+      </div>
+
+      <form action="/create" method="post" class="space-y-6">
+        <div class="bounce-in stagger-1">
+          <label for="title" class="block text-sm font-semibold text-white/90 mb-3">Note Title</label>
+          <input type="text" name="title" id="title" placeholder="Enter your note title..." required maxlength="100"
+            class="glass-input w-full px-4 py-4 rounded-2xl text-white placeholder-white/50 focus:outline-none transition-all duration-300 text-lg" />
+        </div>
+        <div class="bounce-in stagger-2">
+          <label for="details" class="block text-sm font-semibold text-white/90 mb-3">Note Content</label>
+          <textarea name="details" id="details" rows="6" placeholder="Write your thoughts here..." required
+            maxlength="500000"
+            class="glass-input w-full px-4 py-4 rounded-2xl text-white placeholder-white/50 focus:outline-none resize-none transition-all duration-300 text-lg"></textarea>
+        </div>
+        <div class="flex justify-center bounce-in stagger-3">
+          <button type="submit"
+            class="btn-primary ripple inline-flex items-center px-8 py-4 text-base font-semibold rounded-2xl text-white border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent">
+            <svg class="w-5 h-5 mr-3 icon-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6">
+              </path>
+            </svg>
+            Create Note
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Notes Grid -->
+  <div class="grid w-full px-4 sm:px-6 lg:px-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
+    <% if (files.length> 0) { %>
+      <% files.forEach(function(val, index) { %>
+        <div class="glass-card rounded-3xl p-6 card-hover fade-in-up stagger-<%= (index % 4) + 1 %>"
+          id="card-<%= val %>">
+          <!-- Card Header -->
+          <div class="flex items-start justify-between mb-6">
+            <div class="flex items-center flex-1 min-w-0">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-emerald-400 via-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0 pulse-glow">
+                <svg class="w-6 h-6 text-white icon-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                  </path>
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-white truncate" title="<%= val.title %>">
+                <%= val.title %>
+              </h3>
+            </div>
+            <div class="flex items-center ml-2 space-x-2">
+              <button onclick="openEditModal('<%= encodeURIComponent(val.title) %>')"
+                class="p-2.5 text-white/60 hover:text-yellow-400 hover:bg-white/10 rounded-xl transition-all duration-300 icon-hover"
+                title="Edit filename">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                  </path>
+                </svg>
+              </button>
+
+              <form action="/delete/<%= val._id %>" method="POST" class="inline"
+                onsubmit="event.preventDefault(); confirmDelete(this, this.closest('.card-hover'));">
+                <input type="hidden" name="filename" value="<%= val %>">
+                <button type="submit"
+                  class="p-2.5 text-white/60 hover:text-red-400 hover:bg-white/10 rounded-xl transition-all duration-300 icon-hover"
+                  title="Delete note">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                    </path>
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Card Content -->
+          <div class="mb-6">
+            <p class="text-white/70 text-sm leading-relaxed mb-4">
+              View Your Content
+            </p>
+            <button
+              class="inline-flex items-center text-blue-400 hover:text-blue-300 text-sm font-medium transition-all duration-300 group"
+              data-desc="<%= val.desc.replace(/" /g, '&quot;' ) %>"
+              onclick="openModal(this)">
+              Read More
+              <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform duration-300"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <% }); %>
+          <% } else { %>
+            <div class="col-span-full">
+              <div class="glass-card rounded-3xl p-12 text-center fade-in-up">
+                <div
+                  class="w-32 h-32 bg-gradient-to-br from-gray-400 via-purple-400 to-pink-400 rounded-full flex items-center justify-center mx-auto mb-8 rotate-float pulse-glow">
+                  <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                    </path>
+                  </svg>
+                </div>
+                <h3 class="text-3xl font-bold text-white mb-4 gradient-text">No Notes Yet</h3>
+                <p class="text-white/70 text-xl mb-8">Start creating your first note to organize your thoughts and ideas
+                  beautifully.</p>
+                <div class="inline-flex items-center text-white/50 text-base">
+                  <svg class="w-5 h-5 mr-2 icon-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                  </svg>
+                  Use the form above to get started
+                </div>
+              </div>
+            </div>
+            <% } %>
   </div>
 
   <!-- Note Reading Modal -->
-  <div id="noteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-zinc-800 p-8 rounded-lg w-11/12 sm:w-2/3 max-w-2xl max-h-screen overflow-y-auto relative">
-      <button onclick="closeModal()" class="absolute top-4 right-4 text-white text-2xl">✖</button>
-      <div id="modalContent" class="text-white text-sm"></div>
-    </div>
-  </div>
+  <div id="noteModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop p-4 sm:p-6">
+    <div class="glass-card mx-auto w-full max-w-5xl rounded-3xl fade-in-modal">
+      <!-- Modal Header -->
+      <div
+        class="flex items-center justify-between p-6 border-b border-white/20 sticky top-0 bg-black/30 backdrop-blur-sm z-10 rounded-t-3xl">
+        <h3 class="text-2xl font-bold text-white gradient-text" id="modalTitle">Note Content</h3>
+        <button onclick="closeModal()"
+          class="p-3 text-white/60 hover:text-white hover:bg-white/10 rounded-2xl transition-all duration-300 icon-hover">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
 
-  <!-- Edit Filename Modal -->
-  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-zinc-800 p-6 rounded-lg w-96 relative animate-fadeInModal" id="editModalContent">
-      <!-- Dynamic content will be inserted here -->
-    </div>
-  </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-    <div class="bg-zinc-800 rounded-lg p-6 w-96 text-center shadow-lg animate-fadeInModal">
-      <h3 class="text-xl font-semibold text-red-400 mb-4">Confirm Delete</h3>
-      <p class="mb-6 text-zinc-300">Are you sure you want to delete this note? This action cannot be undone.</p>
-      <div class="flex justify-center gap-4">
-        <button onclick="cancelDelete()"
-          class="px-4 py-2 rounded bg-zinc-600 hover:bg-zinc-500 text-white">Cancel</button>
-        <button onclick="proceedDelete()"
-          class="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white">Delete</button>
+      <!-- Modal Content -->
+      <div class="p-6 max-h-[80vh] overflow-y-auto">
+        <div id="modalContent" class="text-white/90 whitespace-pre-wrap leading-relaxed break-words text-lg"></div>
       </div>
     </div>
   </div>
 
+  <!-- Edit Filename Modal -->
+  <div id="editModal"
+    class="hidden fixed inset-0 modal-backdrop overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl w-full max-w-md fade-in-modal">
+      <div id="editModalContent" class="p-6">
+        <!-- Dynamic content will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="confirmModal"
+    class="hidden fixed inset-0 modal-backdrop overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl w-full max-w-md fade-in-modal">
+      <div class="p-8 text-center">
+        <div
+          class="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6 pulse-glow">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+            </path>
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-3 gradient-text">Delete Note</h3>
+        <p class="text-white/70 mb-8 leading-relaxed text-lg">Are you sure you want to delete this note? This action
+          cannot be undone and your content will be permanently lost.</p>
+        <div class="flex justify-center space-x-4">
+          <button onclick="cancelDelete()"
+            class="px-8 py-3 bg-white/10 hover:bg-white/20 text-white text-base font-medium rounded-2xl border border-white/20 hover:border-white/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 ripple">
+            Cancel
+          </button>
+          <button onclick="proceedDelete()"
+            class="btn-danger px-8 py-3 text-white text-base font-medium rounded-2xl border-0 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-transparent ripple">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/scripts/script.js"></script>
 </body>
 
 </html>

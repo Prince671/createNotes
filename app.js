@@ -1,38 +1,67 @@
-const express=require('express');
-const path=require('path');
-const fs=require('fs');
-const app=express();
+const express = require("express");
+const path = require("path");
+const fs = require("fs");
+const connection = require("./config/db.config");
+const userModel = require("./models/user.model");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv").config();
+const cookieParser = require("cookie-parser");
+
+const userRoutes = require("./routes/user.routes");
+const fileModel = require("./models/file.model");
+
+const app = express();
 
 app.use(express.json());
-app.use(express.urlencoded({extended:true}));
-// app.use(express.static(path.join(__dirname, "public")));
-// app.use(express.static(path.join(__dirname, "Files")));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.static("public")); // For public folder
 
-app.use(express.static(path.join(__dirname, "public"))); // For public folder
-app.use('/Files', express.static(path.join(__dirname, "Files"))); // For Files folder with '/Files' URL prefix
+app.set("view engine", "ejs");
 
-
-
-app.set('view engine', 'ejs');
-
-app.get('/', (req,res)=>{
-
+/*
+app.get('/', isLoggedIn, (req,res)=>{
     // SYNTAX: "fs.readdir(path[, options], callback)"
     fs.readdir(`./Files`, (err, files)=>{
         console.log(files);
         res.render('index', {files: files});
     })
-    
+});*/
+
+app.get("/", isLoggedIn, async (req, res) => {
+  const findFile = await fileModel.find({
+    user: req.user.id,
+  });
+  //    console.log("file Found: ", findFile);
+  res.render("index", { files: findFile });
 });
 
-app.post('/create', (req,res)=>{
-    //SynTax "fs.writeFile(file, data[, options], callback)"
-    fs.writeFile(`./Files/${req.body.title.split(' ').join('')}.txt`, req.body.details, (err)=>{
-        res.redirect('/');
-    })
-})
+app.use("/user", userRoutes);
 
-//offical way of reading the File is 
+app.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.redirect("/user/login");
+});
+
+// app.post('/create', (req,res)=>{
+//     //SynTax "fs.writeFile(file, data[, options], callback)"
+//     fs.writeFile(`./Files/${req.body.title.split(' ').join('')}.txt`, req.body.details, (err)=>{
+//         res.redirect('/');
+//     })
+// })
+
+app.post("/create", isLoggedIn, async (req, res) => {
+  let { title, details } = req.body;
+
+  const newFile = await fileModel.create({
+    title: title,
+    desc: details,
+    user: req.user.id,
+  });
+  res.redirect("/");
+});
+//offical way of reading the File is
 /*
 app.get('/file/:filename', (req, res)=>{
     fs.readFile(`./file/${req.params.filename}`, "utf-8", (err, filedata)=>{
@@ -40,43 +69,72 @@ app.get('/file/:filename', (req, res)=>{
     })
 })
 */
-app.post('/delete', (req, res) => {
-    const fileName = req.body.filename;
-    const filePath = path.join(__dirname, 'Files', fileName);
+app.post("/delete/:fileKiID", (req, res) => {
+  const fileId = req.params.fileKiID;
+  //   console.log("ID mila URL se:", fileId);
 
-    // Confirm filePath is a string
-    console.log("File path to delete:", filePath);
-
-    fs.unlink(filePath, (err) => { // the unlink is used ot delete the File From the folder
-        res.redirect('/');
+  fileModel
+    .findOneAndDelete({ _id: fileId })
+    .then(() => {
+      // console.log("File deleted successfully.");
+      res.redirect("/");
+    })
+    .catch((err) => {
+      console.error("Error deleting file:", err);
+      res.status(500).send("Error deleting file");
     });
 });
 
-app.get('/editfilename/:filename', (req, res) => {
-  res.render('editFileName', { perviousFileName: req.params.filename });
+app.get("/editfilename/:filename", (req, res) => {
+  res.render("editFileName", { previousFileName: req.params.filename });
 });
 
+app.post("/editfilename=/:filename", async (req, res) => {
+  const fileName = req.params.filename;
+  console.log("file ka naam hai: ", fileName);
+  let { newFileName } = req.body;
+  console.log("File ka Naya nam hia : ", newFileName);
+  const findFile = await fileModel.findOneAndUpdate(
+    { title: fileName },
+    { title: newFileName }
+  );
+  res.redirect("/");
+});
 
-app.post('/editfilename=/:filename', (req, res)=>{
-    fs.rename(`./Files/${req.params.filename}`, `./Files/${req.body.newFileName}`, ()=>{
-        res.redirect('/');
-    })
-})
-
-app.post('/update', (req, res) => {
+app.post("/update", (req, res) => {
   const { filename, content } = req.body;
-  const filePath = path.join(__dirname, 'file', filename);
+  const filePath = path.join(__dirname, "file", filename);
 
-  fs.writeFile(filePath, content, 'utf8', err => {
+  fs.writeFile(filePath, content, "utf8", (err) => {
     if (err) {
-      console.error('Error writing file:', err);
-      return res.status(500).send('Failed to update note');
+      console.error("Error writing file:", err);
+      return res.status(500).send("Failed to update note");
     }
-    res.send('Note updated successfully');
+    res.send("Note updated successfully");
   });
 });
 
+function isLoggedIn(req, res, next) {
+  const token = req.cookies.token;
 
-app.listen(3000, ()=>{
-    console.log("Server Started");
-})
+  if (!token) {
+    return res.redirect("/user/login");
+  }
+
+  try {
+    const decodedValue = jwt.verify(token, process.env.JWT_SECRETKEY);
+    req.user = decodedValue;
+    next();
+  } catch (err) {
+    res.clearCookie("token");
+    return res.status(401).redirect("/user/login");
+  }
+}
+// Only listen when running locally (not on Vercel)
+if (require.main === module) {
+  app.listen(3000, () => {
+    console.log("Server is running on http://localhost:3000");
+  });
+}
+
+module.exports = app; // <-- important for Vercel to import
